@@ -4,7 +4,7 @@
 // @match        https://www.youtube.com/*
 // @run-at       document-idle
 // @grant        none
-// @version      1.6
+// @version      1.7
 // @description  Replaces YouTube's comment/recommendation area with a clean info panel showing channel, exact view count, likes, dislikes, publish date, duration, and tags.
 // @author       jloures
 // @downloadURL  https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
@@ -14,7 +14,9 @@
   'use strict';
   const TAG = '[YT Info Panel]';
   const PANEL_ID = 'vm-yt-info-panel';
-  console.log(TAG, 'script loaded on', location.href);
+  
+  let latestPlayerResponse = null;
+
   const fmtNum = n => (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString();
   const fmtDate = iso => {
     if (!iso) return '—';
@@ -40,9 +42,9 @@
     const urlId = new URLSearchParams(window.location.search).get('v');
     if (!urlId) return null;
 
-    // Check multiple possible sources for playerResponse
-    const pr = document.querySelector('ytd-watch-flexy')?.playerResponse 
-            || document.querySelector('ytd-app')?.data?.playerResponse
+    // Source priority: Event Data > Watch Flexy Element > Global Initial Variable
+    const pr = latestPlayerResponse 
+            || document.querySelector('ytd-watch-flexy')?.playerResponse 
             || window.ytInitialPlayerResponse;
 
     if (!pr?.videoDetails || pr.videoDetails.videoId !== urlId) return null;
@@ -50,11 +52,16 @@
     const v = pr.videoDetails;
     const mf = pr.microformat?.playerMicroformatRenderer;
     
+    // Attempt to find channel URL from multiple locations
+    const channelUrl = mf?.ownerProfileUrl 
+                    || document.querySelector('ytd-video-owner-renderer a')?.href 
+                    || (v.channelId ? `https://www.youtube.com/channel/${v.channelId}` : null);
+
     return {
       videoId: v.videoId,
       title: v.title, 
       channel: v.author, 
-      channelUrl: mf?.ownerProfileUrl || (v.channelId ? `https://www.youtube.com/channel/${v.channelId}` : null),
+      channelUrl: channelUrl,
       views: v.viewCount,
       duration: v.lengthSeconds, 
       isLive: v.isLiveContent,
@@ -71,6 +78,7 @@
     const m = label.match(/[\d,.]+\s*(?:K|M|B)?/i);
     return m ? m[0].trim() : null;
   }
+  
   async function updateDislikes(videoId, targetEl) {
     try {
       const r = await fetch(`https://returnyoutubedislikeapi.com/votes?videoId=${videoId}`);
@@ -78,12 +86,14 @@
       if (d && d.dislikes != null) targetEl.textContent = fmtNum(d.dislikes);
     } catch (e) { console.error(TAG, 'dislike fetch failed', e); }
   }
+
   function el(tag, styles, text) {
     const e = document.createElement(tag);
     if (styles) e.style.cssText = styles;
     if (text != null) e.textContent = text;
     return e;
   }
+
   function build(data) {
     const wrap = el('div', `
       margin: 16px 0 24px !important;
@@ -100,12 +110,14 @@
       z-index: 9999 !important;
     `);
     wrap.id = PANEL_ID;
+    wrap.setAttribute('data-video-id', data.videoId);
+    
     wrap.appendChild(el('div', 'font-size:12px;opacity:.5;margin-bottom:8px;', '★ YT INFO PANEL (userscript)'));
     wrap.appendChild(el('div', 'font-size:18px;font-weight:600;margin-bottom:12px;', data.title || ''));
     
     const grid = el('div', 'display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;');
     const rows = [
-      ['Channel', data.channel || '—'],
+      ['Channel', data.channel],
       ['Views', fmtNum(data.views)],
       ['Likes', getLikes() ?? '—'],
       ['Dislikes', 'fetching...'],
@@ -116,16 +128,15 @@
 
     for (const [k, v] of rows) {
       grid.appendChild(el('div', 'opacity:.65', k));
-      const valEl = el('div', '', '');
+      const valEl = el('div');
       
       if (k === 'Channel' && data.channelUrl) {
-        const link = el('a', 'color:#3ea6ff;text-decoration:none;font-weight:500;border-bottom:1px solid transparent;', v);
+        const link = el('a', 'color:#3ea6ff;text-decoration:none;font-weight:500;', v || '—');
         link.href = data.channelUrl;
-        link.onmouseover = () => link.style.borderBottomColor = '#3ea6ff';
-        link.onmouseout = () => link.style.borderBottomColor = 'transparent';
+        link.target = '_blank';
         valEl.appendChild(link);
       } else {
-        valEl.textContent = v;
+        valEl.textContent = v || '—';
       }
       
       grid.appendChild(valEl);
@@ -140,19 +151,14 @@
     }
     return wrap;
   }
+
   function inject() {
     if (location.pathname !== '/watch') return true;
     const data = getData();
-    if (!data) {
-      console.log(TAG, 'stale or no data, waiting...');
-      return false;
-    }
+    if (!data) return false;
     
-    // Check if the panel already exists and is for the correct video
     const existing = document.getElementById(PANEL_ID);
-    if (existing && existing.getAttribute('data-video-id') === data.videoId) {
-      return true;
-    }
+    if (existing && existing.getAttribute('data-video-id') === data.videoId) return true;
     
     existing?.remove();
     
@@ -166,34 +172,36 @@
     for (const find of anchors) {
       const a = find();
       if (a && a.parentNode) {
-        const panel = build(data);
-        panel.setAttribute('data-video-id', data.videoId);
-        a.insertAdjacentElement('afterend', panel);
-        console.log(TAG, 'inserted panel for', data.videoId);
+        a.insertAdjacentElement('afterend', build(data));
+        console.log(TAG, 'injected panel for', data.videoId);
         return true;
       }
     }
     return false;
   }
-  function tryInject(tries = 50) {
+
+  function tryInject(tries = 40) {
     try {
       if (inject()) return;
     } catch (e) { console.error(TAG, 'inject threw', e); }
-    if (tries > 0) setTimeout(() => tryInject(tries - 1), 250);
+    if (tries > 0) setTimeout(() => tryInject(tries - 1), 300);
   }
-  
-  // Initial run
+
+  // Handle YouTube navigation
+  window.addEventListener('yt-navigate-finish', (e) => {
+    console.log(TAG, 'navigation detected');
+    latestPlayerResponse = e.detail?.response?.playerResponse || null;
+    tryInject();
+  });
+
+  // Handle page updates
+  window.addEventListener('yt-page-data-updated', (e) => {
+    if (e.detail?.pageType === 'watch') {
+      latestPlayerResponse = e.detail?.response?.playerResponse || latestPlayerResponse;
+      tryInject();
+    }
+  });
+
+  // Initial load
   tryInject();
-  
-  // Listen for navigation events
-  window.addEventListener('yt-navigate-finish', () => {
-    console.log(TAG, 'navigation finished');
-    tryInject();
-  });
-  
-  // Backup: listen for page data updates which often trigger after navigation
-  window.addEventListener('yt-page-data-updated', () => {
-    console.log(TAG, 'page data updated');
-    tryInject();
-  });
 })();
