@@ -12,6 +12,11 @@ There are two ways to install these scripts:
 | Name | Description | Install |
 | :--- | :--- | :--- |
 | YouTube Minimal Info Panel | Replaces YouTube's comment/recommendation area with a clean info panel showing channel, exact view count, likes, dislikes, publish date, duration, and tags. | [Install](https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js) |
+| Reddit Post Stats | Adds a small panel showing upvote ratio on Reddit posts. | [Install](https://raw.githubusercontent.com/jloures/userscripts/main/reddit-post-stats.user.js) |
+| BR News Cleaner | Removes clutter, sidebars, and ads from UOL and Globo. | [Install](https://raw.githubusercontent.com/jloures/userscripts/main/br-news-cleaner.user.js) |
+| HN Visual Threading | Adds visual guide lines to Hacker News comment threads. | [Install](https://raw.githubusercontent.com/jloures/userscripts/main/hn-threading.user.js) |
+| LinkedIn Noise Filter | Hides "Promoted" and "Liked by" posts on LinkedIn feed. | [Install](https://raw.githubusercontent.com/jloures/userscripts/main/linkedin-noise-filter.user.js) |
+| Interaction Enabler | Re-enables right-click and text selection globally. | [Install](https://raw.githubusercontent.com/jloures/userscripts/main/interaction-enabler.user.js) |
 
 ## Adding a new script
 
