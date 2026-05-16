@@ -11,7 +11,7 @@ There are two ways to install these scripts:
 
 | Name | Description | Install |
 | :--- | :--- | :--- |
-| YouTube Minimal Info Panel | Replaces YouTube's comment/recommendation area with a clean info panel showing channel, exact view count, likes, publish date, duration, and tags. | [Install](https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js) |
+| YouTube Minimal Info Panel | Replaces YouTube's comment/recommendation area with a clean info panel showing channel, exact view count, likes, dislikes, publish date, duration, and tags. | [Install](https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js) |
 
 ## Adding a new script
 

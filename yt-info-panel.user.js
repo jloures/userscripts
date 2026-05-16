@@ -4,8 +4,8 @@
 // @match        https://www.youtube.com/*
 // @run-at       document-idle
 // @grant        none
-// @version      1.2
-// @description  Replaces YouTube's comment/recommendation area with a clean info panel showing channel, exact view count, likes, publish date, duration, and tags.
+// @version      1.3
+// @description  Replaces YouTube's comment/recommendation area with a clean info panel showing channel, exact view count, likes, dislikes, publish date, duration, and tags.
 // @author       jloures
 // @downloadURL  https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
 // @updateURL    https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
@@ -20,27 +20,28 @@
     if (!iso) return '—';
     const d = new Date(iso);
     if (isNaN(d)) return iso;
-    const full = d.toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' });
+    const full = d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
     const days = Math.floor((Date.now() - d.getTime()) / 86400000);
     const rel = days < 1 ? 'today'
-              : days < 30  ? `${days} day${days===1?'':'s'} ago`
-              : days < 365 ? `${Math.floor(days/30)} month${Math.floor(days/30)===1?'':'s'} ago`
-              : `${Math.floor(days/365)} year${Math.floor(days/365)===1?'':'s'} ago`;
+      : days < 30 ? `${days} day${days === 1 ? '' : 's'} ago`
+        : days < 365 ? `${Math.floor(days / 30)} month${Math.floor(days / 30) === 1 ? '' : 's'} ago`
+          : `${Math.floor(days / 365)} year${Math.floor(days / 365) === 1 ? '' : 's'} ago`;
     return `${full} (${rel})`;
   };
   const fmtDur = s => {
     if (!s) return '—';
     s = Number(s);
-    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
-    const pad = n => String(n).padStart(2,'0');
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    const pad = n => String(n).padStart(2, '0');
     return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
   };
   function getData() {
     const pr = window.ytInitialPlayerResponse;
     if (!pr?.videoDetails) return null;
-    const v  = pr.videoDetails;
+    const v = pr.videoDetails;
     const mf = pr.microformat?.playerMicroformatRenderer;
     return {
+      videoId: v.videoId,
       title: v.title, channel: v.author, views: v.viewCount,
       duration: v.lengthSeconds, isLive: v.isLiveContent,
       publishDate: mf?.publishDate, category: mf?.category,
@@ -53,6 +54,13 @@
     const label = btn.getAttribute('aria-label') || btn.title || '';
     const m = label.match(/[\d,.]+\s*(?:K|M|B)?/i);
     return m ? m[0].trim() : null;
+  }
+  async function updateDislikes(videoId, targetEl) {
+    try {
+      const r = await fetch(`https://returnyoutubedislikeapi.com/votes?videoId=${videoId}`);
+      const d = await r.json();
+      if (d && d.dislikes != null) targetEl.textContent = fmtNum(d.dislikes);
+    } catch (e) { console.error(TAG, 'dislike fetch failed', e); }
   }
   // Build using DOM APIs only — no innerHTML (Trusted Types blocks it on YouTube)
   function el(tag, styles, text) {
@@ -81,16 +89,19 @@
     wrap.appendChild(el('div', 'font-size:18px;font-weight:600;margin-bottom:12px;', data.title || ''));
     const grid = el('div', 'display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;');
     const rows = [
-      ['Channel',   data.channel || '—'],
-      ['Views',     fmtNum(data.views)],
-      ['Likes',     getLikes() ?? '—'],
+      ['Channel', data.channel || '—'],
+      ['Views', fmtNum(data.views)],
+      ['Likes', getLikes() ?? '—'],
+      ['Dislikes', 'fetching...'],
       ['Published', fmtDate(data.publishDate)],
-      ['Duration',  fmtDur(data.duration) + (data.isLive ? ' (live)' : '')],
-      ['Category',  data.category || '—'],
+      ['Duration', fmtDur(data.duration) + (data.isLive ? ' (live)' : '')],
+      ['Category', data.category || '—'],
     ];
     for (const [k, v] of rows) {
       grid.appendChild(el('div', 'opacity:.65', k));
-      grid.appendChild(el('div', '', v));
+      const valEl = el('div', '', v);
+      grid.appendChild(valEl);
+      if (k === 'Dislikes') updateDislikes(data.videoId, valEl);
     }
     wrap.appendChild(grid);
     if (data.keywords.length) {
