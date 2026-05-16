@@ -47,13 +47,13 @@
     const mf = pr.microformat?.playerMicroformatRenderer;
     return {
       videoId: v.videoId,
-      title: v.title, 
-      channel: v.author, 
+      title: v.title,
+      channel: v.author,
       channelId: v.channelId,
       views: v.viewCount,
-      duration: v.lengthSeconds, 
+      duration: v.lengthSeconds,
       isLive: v.isLiveContent,
-      publishDate: mf?.publishDate, 
+      publishDate: mf?.publishDate,
       category: mf?.category,
       keywords: v.keywords || []
     };
@@ -97,7 +97,7 @@
     wrap.id = PANEL_ID;
     wrap.appendChild(el('div', 'font-size:12px;opacity:.5;margin-bottom:8px;', '★ YT INFO PANEL (userscript)'));
     wrap.appendChild(el('div', 'font-size:18px;font-weight:600;margin-bottom:12px;', data.title || ''));
-    
+
     const grid = el('div', 'display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;');
     const rows = [
       ['Channel', data.channel || '—'],
@@ -112,7 +112,7 @@
     for (const [k, v] of rows) {
       grid.appendChild(el('div', 'opacity:.65', k));
       const valEl = el('div', '', '');
-      
+
       if (k === 'Channel' && data.channelId) {
         const link = el('a', 'color:#3ea6ff;text-decoration:none;font-weight:500;', v);
         link.href = `/channel/${data.channelId}`;
@@ -121,11 +121,11 @@
       } else {
         valEl.textContent = v;
       }
-      
+
       grid.appendChild(valEl);
       if (k === 'Dislikes') updateDislikes(data.videoId, valEl);
     }
-    
+
     wrap.appendChild(grid);
     if (data.keywords.length) {
       wrap.appendChild(el('div',
