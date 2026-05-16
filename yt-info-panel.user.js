@@ -2,9 +2,10 @@
 // @name         YouTube Minimal Info Panel
 // @namespace    https://violentmonkey.github.io/
 // @match        https://www.youtube.com/*
+// @match        https://m.youtube.com/*
 // @run-at       document-idle
 // @grant        none
-// @version      2.0
+// @version      2.1
 // @description  Clean info panel: channel, views, likes/dislikes, ratio bar, engagement, chapters, speed boost (>2x), SponsorBlock, thumbnails, alt frontends, expandable description.
 // @author       jloures
 // @downloadURL  https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
@@ -15,8 +16,38 @@
   const TAG = '[YT Info Panel]';
   const PANEL_ID = 'vm-yt-info-panel';
   const LS_COLLAPSED = 'vm-yt-info-panel:collapsed';
+  const IS_MOBILE = location.hostname === 'm.youtube.com';
 
   let latestPlayerResponse = null;
+
+  // ---------- responsive style ----------
+  function injectStyle() {
+    if (document.getElementById(PANEL_ID + '-style')) return;
+    const s = document.createElement('style');
+    s.id = PANEL_ID + '-style';
+    s.textContent = `
+      @media (max-width: 700px) {
+        #${PANEL_ID} {
+          padding: 12px 14px !important;
+          font-size: 13px !important;
+          margin: 8px 0 16px !important;
+          border-width: 2px !important;
+          border-radius: 10px !important;
+        }
+        #${PANEL_ID} [data-grid] {
+          grid-template-columns: 1fr !important;
+          gap: 2px 0 !important;
+        }
+        #${PANEL_ID} [data-grid] > div:nth-child(odd) {
+          margin-top: 6px;
+          font-size: 11px;
+          opacity: .55 !important;
+        }
+        #${PANEL_ID} [data-title] { font-size: 15px !important; }
+      }
+    `;
+    (document.head || document.documentElement).appendChild(s);
+  }
 
   // ---------- formatting ----------
   const fmtNum = n => (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString();
@@ -78,6 +109,8 @@
 
     const channelUrl = mf?.ownerProfileUrl
       || document.querySelector('ytd-video-owner-renderer a')?.href
+      || document.querySelector('ytm-slim-owner-renderer a, a.slim-owner-icon-and-title')?.href
+      || document.querySelector('ytm-watch a[href*="/channel/"], ytm-watch a[href*="/@"]')?.href
       || (v.channelId ? `https://www.youtube.com/channel/${v.channelId}` : null);
 
     return {
@@ -101,7 +134,10 @@
       'like-button-view-model button',
       'segmented-like-dislike-button-view-model button[aria-label*="like" i]',
       'ytd-menu-renderer like-button-view-model button',
+      'ytm-like-button-renderer button',
+      'ytm-slim-video-action-bar-renderer button[aria-label*="like" i]',
       'button[aria-label*="like this video" i]',
+      'button[aria-label*="like" i]:not([aria-label*="dislike" i])',
     ];
     let btn = null;
     for (const s of sels) { btn = document.querySelector(s); if (btn) break; }
@@ -427,6 +463,7 @@
 
   // ---------- panel build ----------
   function build(data) {
+    injectStyle();
     const wrap = el('div', `
       margin: 16px 0 24px !important;
       padding: 16px 20px !important;
@@ -446,7 +483,8 @@
 
     // header w/ collapse toggle
     const header = el('div', 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;');
-    header.appendChild(el('div', 'font-size:12px;opacity:.5;', '★ YT INFO PANEL (Alt+I to toggle)'));
+    header.appendChild(el('div', 'font-size:12px;opacity:.5;',
+      IS_MOBILE ? '★ YT INFO PANEL' : '★ YT INFO PANEL (Alt+I to toggle)'));
     const collapseBtn = btn('—', null, 'Collapse');
     collapseBtn.setAttribute('data-role', 'collapse');
     header.appendChild(collapseBtn);
@@ -454,7 +492,9 @@
 
     const body = el('div', '');
 
-    body.appendChild(el('div', 'font-size:18px;font-weight:600;margin-bottom:6px;', data.title || ''));
+    const titleEl = el('div', 'font-size:18px;font-weight:600;margin-bottom:6px;', data.title || '');
+    titleEl.setAttribute('data-title', '');
+    body.appendChild(titleEl);
 
     // copy actions
     const videoUrl = `https://www.youtube.com/watch?v=${data.videoId}`;
@@ -472,6 +512,7 @@
     const dislikesEl = el('div', '', 'fetching...');
 
     const grid = el('div', 'display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;align-items:start;');
+    grid.setAttribute('data-grid', '');
     const rows = [
       ['Channel', null],
       ['Views', null],
@@ -594,7 +635,13 @@
     if (existing && existing.getAttribute('data-video-id') === data.videoId) return true;
     existing?.remove();
 
-    const anchors = [
+    const anchors = IS_MOBILE ? [
+      () => document.querySelector('ytm-slim-video-metadata-section-renderer'),
+      () => document.querySelector('ytm-slim-video-information-renderer'),
+      () => document.querySelector('ytm-watch #player'),
+      () => document.querySelector('ytm-watch .player-container-android, ytm-watch .player-size'),
+      () => document.querySelector('ytm-watch'),
+    ] : [
       () => document.querySelector('#primary-inner #player'),
       () => document.querySelector('#player-container-outer'),
       () => document.querySelector('ytd-watch-flexy #primary'),
