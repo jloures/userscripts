@@ -4,7 +4,7 @@
 // @match        https://www.youtube.com/*
 // @run-at       document-idle
 // @grant        none
-// @version      1.5
+// @version      1.6
 // @description  Replaces YouTube's comment/recommendation area with a clean info panel showing channel, exact view count, likes, dislikes, publish date, duration, and tags.
 // @author       jloures
 // @downloadURL  https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
@@ -40,20 +40,25 @@
     const urlId = new URLSearchParams(window.location.search).get('v');
     if (!urlId) return null;
 
-    const pr = document.querySelector('ytd-watch-flexy')?.playerResponse || window.ytInitialPlayerResponse;
+    // Check multiple possible sources for playerResponse
+    const pr = document.querySelector('ytd-watch-flexy')?.playerResponse 
+            || document.querySelector('ytd-app')?.data?.playerResponse
+            || window.ytInitialPlayerResponse;
+
     if (!pr?.videoDetails || pr.videoDetails.videoId !== urlId) return null;
 
     const v = pr.videoDetails;
     const mf = pr.microformat?.playerMicroformatRenderer;
+    
     return {
       videoId: v.videoId,
-      title: v.title,
-      channel: v.author,
-      channelId: v.channelId,
+      title: v.title, 
+      channel: v.author, 
+      channelUrl: mf?.ownerProfileUrl || (v.channelId ? `https://www.youtube.com/channel/${v.channelId}` : null),
       views: v.viewCount,
-      duration: v.lengthSeconds,
+      duration: v.lengthSeconds, 
       isLive: v.isLiveContent,
-      publishDate: mf?.publishDate,
+      publishDate: mf?.publishDate, 
       category: mf?.category,
       keywords: v.keywords || []
     };
@@ -97,7 +102,7 @@
     wrap.id = PANEL_ID;
     wrap.appendChild(el('div', 'font-size:12px;opacity:.5;margin-bottom:8px;', '★ YT INFO PANEL (userscript)'));
     wrap.appendChild(el('div', 'font-size:18px;font-weight:600;margin-bottom:12px;', data.title || ''));
-
+    
     const grid = el('div', 'display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;');
     const rows = [
       ['Channel', data.channel || '—'],
@@ -112,20 +117,21 @@
     for (const [k, v] of rows) {
       grid.appendChild(el('div', 'opacity:.65', k));
       const valEl = el('div', '', '');
-
-      if (k === 'Channel' && data.channelId) {
-        const link = el('a', 'color:#3ea6ff;text-decoration:none;font-weight:500;', v);
-        link.href = `/channel/${data.channelId}`;
-        link.target = '_blank';
+      
+      if (k === 'Channel' && data.channelUrl) {
+        const link = el('a', 'color:#3ea6ff;text-decoration:none;font-weight:500;border-bottom:1px solid transparent;', v);
+        link.href = data.channelUrl;
+        link.onmouseover = () => link.style.borderBottomColor = '#3ea6ff';
+        link.onmouseout = () => link.style.borderBottomColor = 'transparent';
         valEl.appendChild(link);
       } else {
         valEl.textContent = v;
       }
-
+      
       grid.appendChild(valEl);
       if (k === 'Dislikes') updateDislikes(data.videoId, valEl);
     }
-
+    
     wrap.appendChild(grid);
     if (data.keywords.length) {
       wrap.appendChild(el('div',
@@ -137,30 +143,57 @@
   function inject() {
     if (location.pathname !== '/watch') return true;
     const data = getData();
-    if (!data) return false;
-    document.getElementById(PANEL_ID)?.remove();
+    if (!data) {
+      console.log(TAG, 'stale or no data, waiting...');
+      return false;
+    }
+    
+    // Check if the panel already exists and is for the correct video
+    const existing = document.getElementById(PANEL_ID);
+    if (existing && existing.getAttribute('data-video-id') === data.videoId) {
+      return true;
+    }
+    
+    existing?.remove();
+    
     const anchors = [
       () => document.querySelector('#primary-inner #player'),
       () => document.querySelector('#player-container-outer'),
       () => document.querySelector('ytd-watch-flexy #primary'),
       () => document.querySelector('#below'),
     ];
+    
     for (const find of anchors) {
       const a = find();
       if (a && a.parentNode) {
-        a.insertAdjacentElement('afterend', build(data));
-        console.log(TAG, 'inserted after', a);
+        const panel = build(data);
+        panel.setAttribute('data-video-id', data.videoId);
+        a.insertAdjacentElement('afterend', panel);
+        console.log(TAG, 'inserted panel for', data.videoId);
         return true;
       }
     }
     return false;
   }
-  function tryInject(tries = 40) {
+  function tryInject(tries = 50) {
     try {
       if (inject()) return;
     } catch (e) { console.error(TAG, 'inject threw', e); }
-    if (tries > 0) setTimeout(() => tryInject(tries - 1), 300);
+    if (tries > 0) setTimeout(() => tryInject(tries - 1), 250);
   }
+  
+  // Initial run
   tryInject();
-  document.addEventListener('yt-navigate-finish', () => { console.log(TAG, 'yt-navigate-finish'); tryInject(); });
+  
+  // Listen for navigation events
+  window.addEventListener('yt-navigate-finish', () => {
+    console.log(TAG, 'navigation finished');
+    tryInject();
+  });
+  
+  // Backup: listen for page data updates which often trigger after navigation
+  window.addEventListener('yt-page-data-updated', () => {
+    console.log(TAG, 'page data updated');
+    tryInject();
+  });
 })();
