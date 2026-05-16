@@ -4,7 +4,7 @@
 // @match        https://www.youtube.com/*
 // @run-at       document-idle
 // @grant        none
-// @version      1.3
+// @version      1.4
 // @description  Replaces YouTube's comment/recommendation area with a clean info panel showing channel, exact view count, likes, dislikes, publish date, duration, and tags.
 // @author       jloures
 // @downloadURL  https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
@@ -35,9 +35,15 @@
     const pad = n => String(n).padStart(2, '0');
     return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
   };
+
   function getData() {
-    const pr = window.ytInitialPlayerResponse;
-    if (!pr?.videoDetails) return null;
+    const urlId = new URLSearchParams(window.location.search).get('v');
+    if (!urlId) return null;
+
+    // Use ytd-watch-flexy's playerResponse as it updates on SPA navigation
+    const pr = document.querySelector('ytd-watch-flexy')?.playerResponse || window.ytInitialPlayerResponse;
+    if (!pr?.videoDetails || pr.videoDetails.videoId !== urlId) return null;
+
     const v = pr.videoDetails;
     const mf = pr.microformat?.playerMicroformatRenderer;
     return {
@@ -48,6 +54,7 @@
       keywords: v.keywords || []
     };
   }
+
   function getLikes() {
     const btn = document.querySelector('like-button-view-model button, ytd-toggle-button-renderer #button');
     if (!btn) return null;
