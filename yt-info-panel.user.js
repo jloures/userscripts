@@ -4,7 +4,7 @@
 // @match        https://www.youtube.com/*
 // @run-at       document-idle
 // @grant        none
-// @version      1.4
+// @version      1.5
 // @description  Replaces YouTube's comment/recommendation area with a clean info panel showing channel, exact view count, likes, dislikes, publish date, duration, and tags.
 // @author       jloures
 // @downloadURL  https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
@@ -40,7 +40,6 @@
     const urlId = new URLSearchParams(window.location.search).get('v');
     if (!urlId) return null;
 
-    // Use ytd-watch-flexy's playerResponse as it updates on SPA navigation
     const pr = document.querySelector('ytd-watch-flexy')?.playerResponse || window.ytInitialPlayerResponse;
     if (!pr?.videoDetails || pr.videoDetails.videoId !== urlId) return null;
 
@@ -48,9 +47,14 @@
     const mf = pr.microformat?.playerMicroformatRenderer;
     return {
       videoId: v.videoId,
-      title: v.title, channel: v.author, views: v.viewCount,
-      duration: v.lengthSeconds, isLive: v.isLiveContent,
-      publishDate: mf?.publishDate, category: mf?.category,
+      title: v.title, 
+      channel: v.author, 
+      channelId: v.channelId,
+      views: v.viewCount,
+      duration: v.lengthSeconds, 
+      isLive: v.isLiveContent,
+      publishDate: mf?.publishDate, 
+      category: mf?.category,
       keywords: v.keywords || []
     };
   }
@@ -69,7 +73,6 @@
       if (d && d.dislikes != null) targetEl.textContent = fmtNum(d.dislikes);
     } catch (e) { console.error(TAG, 'dislike fetch failed', e); }
   }
-  // Build using DOM APIs only — no innerHTML (Trusted Types blocks it on YouTube)
   function el(tag, styles, text) {
     const e = document.createElement(tag);
     if (styles) e.style.cssText = styles;
@@ -94,6 +97,7 @@
     wrap.id = PANEL_ID;
     wrap.appendChild(el('div', 'font-size:12px;opacity:.5;margin-bottom:8px;', '★ YT INFO PANEL (userscript)'));
     wrap.appendChild(el('div', 'font-size:18px;font-weight:600;margin-bottom:12px;', data.title || ''));
+    
     const grid = el('div', 'display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;');
     const rows = [
       ['Channel', data.channel || '—'],
@@ -104,12 +108,24 @@
       ['Duration', fmtDur(data.duration) + (data.isLive ? ' (live)' : '')],
       ['Category', data.category || '—'],
     ];
+
     for (const [k, v] of rows) {
       grid.appendChild(el('div', 'opacity:.65', k));
-      const valEl = el('div', '', v);
+      const valEl = el('div', '', '');
+      
+      if (k === 'Channel' && data.channelId) {
+        const link = el('a', 'color:#3ea6ff;text-decoration:none;font-weight:500;', v);
+        link.href = `/channel/${data.channelId}`;
+        link.target = '_blank';
+        valEl.appendChild(link);
+      } else {
+        valEl.textContent = v;
+      }
+      
       grid.appendChild(valEl);
       if (k === 'Dislikes') updateDislikes(data.videoId, valEl);
     }
+    
     wrap.appendChild(grid);
     if (data.keywords.length) {
       wrap.appendChild(el('div',
@@ -137,7 +153,6 @@
         return true;
       }
     }
-    console.log(TAG, 'no anchor found');
     return false;
   }
   function tryInject(tries = 40) {
