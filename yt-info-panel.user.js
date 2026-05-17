@@ -5,7 +5,7 @@
 // @match        https://m.youtube.com/*
 // @run-at       document-idle
 // @grant        none
-// @version      2.3
+// @version      2.4
 // @description  Clean info panel: channel, views, likes/dislikes, ratio bar, engagement, chapters, speed boost (>2x), SponsorBlock, thumbnails, alt frontends, expandable description.
 // @author       jloures
 // @downloadURL  https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
@@ -40,6 +40,26 @@
     const s = document.createElement('style');
     s.id = PANEL_ID + '-style';
     s.textContent = `
+      #${PANEL_ID} input[type=number]::-webkit-inner-spin-button,
+      #${PANEL_ID} input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none !important;
+        margin: 0 !important;
+      }
+      #${PANEL_ID} input[type=number] {
+        -moz-appearance: textfield !important;
+      }
+      #${PANEL_ID} select option {
+        background: var(--vm-btn-bg) !important;
+        color: var(--vm-text) !important;
+      }
+      #${PANEL_ID} input:focus, #${PANEL_ID} select:focus {
+        border-color: var(--vm-accent) !important;
+        box-shadow: 0 0 0 1px var(--vm-accent) !important;
+      }
+      #${PANEL_ID} input::placeholder {
+        color: var(--vm-text) !important;
+        opacity: 0.5 !important;
+      }
       @media (max-width: 700px) {
         #${PANEL_ID} {
           padding: 12px 14px !important;
@@ -364,13 +384,15 @@
     }
     const input = el('input', `
       width:60px;background:var(--vm-btn-bg);color:var(--vm-text);border:1px solid var(--vm-btn-border);
-      border-radius:6px;padding:3px 6px;font-size:11px;margin-left:4px;
+      border-radius:6px;padding:3px 6px;font-size:11px;margin-left:4px;text-align:center;font-family:inherit;outline:none;transition:border-color .2s, box-shadow .2s;
     `);
     input.type = 'number';
     input.step = '0.1';
     input.min = '0.1';
     input.max = '16';
     input.placeholder = 'custom';
+    input.addEventListener('mouseenter', () => input.style.backgroundColor = 'var(--vm-btn-bg-hover)');
+    input.addEventListener('mouseleave', () => input.style.backgroundColor = 'var(--vm-btn-bg)');
     input.addEventListener('change', () => {
       const v = parseFloat(input.value);
       if (v > 0) setRate(v);
@@ -495,17 +517,23 @@
     wrap.id = PANEL_ID;
     wrap.setAttribute('data-video-id', data.videoId);
 
+    const themeSelect = el('select', 'background:var(--vm-btn-bg);color:var(--vm-text);border:1px solid var(--vm-btn-border);border-radius:6px;font-size:11px;padding:3px 20px 3px 8px;cursor:pointer;margin-right:8px;outline:none;font-family:inherit;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-repeat:no-repeat;background-position:right 6px center;background-size:10px 10px;transition:border-color .2s, box-shadow .2s;');
+    themeSelect.addEventListener('mouseenter', () => themeSelect.style.backgroundColor = 'var(--vm-btn-bg-hover)');
+    themeSelect.addEventListener('mouseleave', () => themeSelect.style.backgroundColor = 'var(--vm-btn-bg)');
+
     const applyTheme = (themeId) => {
       const t = THEMES[themeId] || THEMES.default;
       for (const [k, v] of Object.entries(t.vars)) wrap.style.setProperty(k, v);
+      
+      const textColor = t.vars['--vm-text'];
+      const encodedSvg = `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(textColor)}' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`;
+      themeSelect.style.backgroundImage = encodedSvg;
+
       try { localStorage.setItem(LS_THEME, themeId); } catch (e) { }
     };
     const currentTheme = localStorage.getItem(LS_THEME) || 'default';
     applyTheme(currentTheme);
 
-    const themeSelect = el('select', 'background:var(--vm-btn-bg);color:var(--vm-text);border:1px solid var(--vm-btn-border);border-radius:6px;font-size:11px;padding:3px 6px;cursor:pointer;margin-right:8px;outline:none;font-family:inherit;');
-    themeSelect.addEventListener('mouseenter', () => themeSelect.style.background = 'var(--vm-btn-bg-hover)');
-    themeSelect.addEventListener('mouseleave', () => themeSelect.style.background = 'var(--vm-btn-bg)');
     for (const [id, t] of Object.entries(THEMES)) {
       const opt = document.createElement('option');
       opt.value = id;
