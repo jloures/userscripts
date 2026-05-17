@@ -503,7 +503,9 @@
     const currentTheme = localStorage.getItem(LS_THEME) || 'default';
     applyTheme(currentTheme);
 
-    const themeSelect = el('select', 'background:var(--vm-btn-bg);color:var(--vm-text);border:1px solid var(--vm-btn-border);border-radius:4px;font-size:11px;padding:2px;cursor:pointer;margin-right:8px;outline:none;');
+    const themeSelect = el('select', 'background:var(--vm-btn-bg);color:var(--vm-text);border:1px solid var(--vm-btn-border);border-radius:6px;font-size:11px;padding:3px 6px;cursor:pointer;margin-right:8px;outline:none;font-family:inherit;');
+    themeSelect.addEventListener('mouseenter', () => themeSelect.style.background = 'var(--vm-btn-bg-hover)');
+    themeSelect.addEventListener('mouseleave', () => themeSelect.style.background = 'var(--vm-btn-bg)');
     for (const [id, t] of Object.entries(THEMES)) {
       const opt = document.createElement('option');
       opt.value = id;
