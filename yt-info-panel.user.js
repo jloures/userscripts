@@ -5,7 +5,7 @@
 // @match        https://m.youtube.com/*
 // @run-at       document-idle
 // @grant        none
-// @version      2.1
+// @version      2.2
 // @description  Clean info panel: channel, views, likes/dislikes, ratio bar, engagement, chapters, speed boost (>2x), SponsorBlock, thumbnails, alt frontends, expandable description.
 // @author       jloures
 // @downloadURL  https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
@@ -16,7 +16,21 @@
   const TAG = '[YT Info Panel]';
   const PANEL_ID = 'vm-yt-info-panel';
   const LS_COLLAPSED = 'vm-yt-info-panel:collapsed';
+  const LS_THEME = 'vm-yt-info-panel:theme';
   const IS_MOBILE = location.hostname === 'm.youtube.com';
+
+  const THEMES = {
+    default: { name: 'Default', vars: { '--vm-bg': '#1a1a1a', '--vm-text': '#f1f1f1', '--vm-border': '#ff4444', '--vm-btn-bg': '#2a2a2a', '--vm-btn-bg-hover': '#3a3a3a', '--vm-btn-border': '#444', '--vm-accent': '#3ea6ff', '--vm-pre-bg': '#222', '--vm-ratio-bg': '#5a2a2a', '--vm-row-hover': '#2a2a2a' } },
+    light: { name: 'Light', vars: { '--vm-bg': '#ffffff', '--vm-text': '#111111', '--vm-border': '#cc0000', '--vm-btn-bg': '#f0f0f0', '--vm-btn-bg-hover': '#e0e0e0', '--vm-btn-border': '#ccc', '--vm-accent': '#065fd4', '--vm-pre-bg': '#f9f9f9', '--vm-ratio-bg': '#e0e0e0', '--vm-row-hover': '#f0f0f0' } },
+    monokai: { name: 'Monokai', vars: { '--vm-bg': '#272822', '--vm-text': '#f8f8f2', '--vm-border': '#f92672', '--vm-btn-bg': '#3e3d32', '--vm-btn-bg-hover': '#49483e', '--vm-btn-border': '#75715e', '--vm-accent': '#a6e22e', '--vm-pre-bg': '#1e1f1c', '--vm-ratio-bg': '#49483e', '--vm-row-hover': '#3e3d32' } },
+    homebrew: { name: 'Homebrew', vars: { '--vm-bg': '#000000', '--vm-text': '#00ff00', '--vm-border': '#00ff00', '--vm-btn-bg': '#003300', '--vm-btn-bg-hover': '#004400', '--vm-btn-border': '#00ff00', '--vm-accent': '#00ff00', '--vm-pre-bg': '#001100', '--vm-ratio-bg': '#003300', '--vm-row-hover': '#002200' } },
+    solarizedDark: { name: 'Solarized Dark', vars: { '--vm-bg': '#002b36', '--vm-text': '#839496', '--vm-border': '#b58900', '--vm-btn-bg': '#073642', '--vm-btn-bg-hover': '#586e75', '--vm-btn-border': '#586e75', '--vm-accent': '#2aa198', '--vm-pre-bg': '#001e26', '--vm-ratio-bg': '#073642', '--vm-row-hover': '#073642' } },
+    solarizedLight: { name: 'Solarized Light', vars: { '--vm-bg': '#fdf6e3', '--vm-text': '#657b83', '--vm-border': '#b58900', '--vm-btn-bg': '#eee8d5', '--vm-btn-bg-hover': '#93a1a1', '--vm-btn-border': '#93a1a1', '--vm-accent': '#2aa198', '--vm-pre-bg': '#f5efdc', '--vm-ratio-bg': '#eee8d5', '--vm-row-hover': '#eee8d5' } },
+    dracula: { name: 'Dracula', vars: { '--vm-bg': '#282a36', '--vm-text': '#f8f8f2', '--vm-border': '#bd93f9', '--vm-btn-bg': '#44475a', '--vm-btn-bg-hover': '#6272a4', '--vm-btn-border': '#6272a4', '--vm-accent': '#ff79c6', '--vm-pre-bg': '#21222c', '--vm-ratio-bg': '#44475a', '--vm-row-hover': '#44475a' } },
+    nord: { name: 'Nord', vars: { '--vm-bg': '#2e3440', '--vm-text': '#d8dee9', '--vm-border': '#88c0d0', '--vm-btn-bg': '#3b4252', '--vm-btn-bg-hover': '#434c5e', '--vm-btn-border': '#4c566a', '--vm-accent': '#8fbcbb', '--vm-pre-bg': '#242933', '--vm-ratio-bg': '#3b4252', '--vm-row-hover': '#3b4252' } },
+    gruvbox: { name: 'Gruvbox', vars: { '--vm-bg': '#282828', '--vm-text': '#ebdbb2', '--vm-border': '#cc241d', '--vm-btn-bg': '#3c3836', '--vm-btn-bg-hover': '#504945', '--vm-btn-border': '#504945', '--vm-accent': '#b8bb26', '--vm-pre-bg': '#1d2021', '--vm-ratio-bg': '#3c3836', '--vm-row-hover': '#3c3836' } },
+    synthwave: { name: 'Synthwave', vars: { '--vm-bg': '#2b213a', '--vm-text': '#f92aad', '--vm-border': '#ff8b39', '--vm-btn-bg': '#241b31', '--vm-btn-bg-hover': '#3a2d4d', '--vm-btn-border': '#36274e', '--vm-accent': '#00fff5', '--vm-pre-bg': '#1f162a', '--vm-ratio-bg': '#36274e', '--vm-row-hover': '#3a2d4d' } }
+  };
 
   let latestPlayerResponse = null;
 
@@ -81,17 +95,17 @@
   const getPlayer = () => document.getElementById('movie_player');
   const seekTo = s => {
     const p = getPlayer();
-    try { p?.seekTo?.(s, true); } catch (e) {}
+    try { p?.seekTo?.(s, true); } catch (e) { }
     const v = document.querySelector('video');
-    if (v) try { v.currentTime = s; } catch (e) {}
+    if (v) try { v.currentTime = s; } catch (e) { }
   };
   const setRate = r => {
     const p = getPlayer();
-    try { p?.setPlaybackRate?.(r); } catch (e) {}
+    try { p?.setPlaybackRate?.(r); } catch (e) { }
     const v = document.querySelector('video');
-    if (v) try { v.playbackRate = r; } catch (e) {}
+    if (v) try { v.playbackRate = r; } catch (e) { }
   };
-  const copy = t => { try { navigator.clipboard?.writeText(t); } catch (e) {} };
+  const copy = t => { try { navigator.clipboard?.writeText(t); } catch (e) { } };
 
   // ---------- data extraction ----------
   function getData() {
@@ -227,13 +241,13 @@
   }
   function btn(label, onClick, title) {
     const b = el('button', `
-      background:#2a2a2a;color:#f1f1f1;border:1px solid #444;
+      background:var(--vm-btn-bg);color:var(--vm-text);border:1px solid var(--vm-btn-border);
       border-radius:6px;padding:3px 8px;font-size:11px;
       cursor:pointer;margin:0 4px 4px 0;font-family:inherit;
     `, label);
     if (title) b.title = title;
-    b.addEventListener('mouseenter', () => b.style.background = '#3a3a3a');
-    b.addEventListener('mouseleave', () => b.style.background = '#2a2a2a');
+    b.addEventListener('mouseenter', () => b.style.background = 'var(--vm-btn-bg-hover)');
+    b.addEventListener('mouseleave', () => b.style.background = 'var(--vm-btn-bg)');
     if (onClick) b.addEventListener('click', onClick);
     return b;
   }
@@ -286,8 +300,8 @@
   // ---------- ratio bar ----------
   function makeRatioBar() {
     const wrap = el('div', 'display:flex;flex-direction:column;gap:3px;min-width:200px;');
-    const bar = el('div', 'width:100%;height:6px;background:#5a2a2a;border-radius:3px;overflow:hidden;');
-    const fill = el('div', 'width:0%;height:100%;background:#3ea6ff;transition:width .3s;');
+    const bar = el('div', 'width:100%;height:6px;background:var(--vm-ratio-bg);border-radius:3px;overflow:hidden;');
+    const fill = el('div', 'width:0%;height:100%;background:var(--vm-accent);transition:width .3s;');
     bar.appendChild(fill);
     const label = el('div', 'font-size:11px;opacity:.7;', '—');
     wrap.appendChild(bar);
@@ -330,10 +344,10 @@
           display:flex;gap:10px;align-items:baseline;
           padding:3px 6px;border-radius:4px;cursor:pointer;
         `);
-        row.addEventListener('mouseenter', () => row.style.background = '#2a2a2a');
+        row.addEventListener('mouseenter', () => row.style.background = 'var(--vm-row-hover)');
         row.addEventListener('mouseleave', () => row.style.background = '');
         row.addEventListener('click', () => seekTo(c.t));
-        row.appendChild(el('span', 'color:#3ea6ff;font-variant-numeric:tabular-nums;min-width:60px;', fmtDur(c.t)));
+        row.appendChild(el('span', 'color:var(--vm-accent);font-variant-numeric:tabular-nums;min-width:60px;', fmtDur(c.t)));
         row.appendChild(el('span', '', c.label));
         list.appendChild(row);
       }
@@ -349,7 +363,7 @@
       wrap.appendChild(btn(r + '×', () => setRate(r), `Set playback rate to ${r}×`));
     }
     const input = el('input', `
-      width:60px;background:#2a2a2a;color:#f1f1f1;border:1px solid #444;
+      width:60px;background:var(--vm-btn-bg);color:var(--vm-text);border:1px solid var(--vm-btn-border);
       border-radius:6px;padding:3px 6px;font-size:11px;margin-left:4px;
     `);
     input.type = 'number';
@@ -373,7 +387,7 @@
       ['sd', 'sddefault'], ['mq', 'mqdefault'], ['default', 'default'],
     ];
     for (const [name, file] of sizes) {
-      const a = el('a', 'color:#3ea6ff;text-decoration:none;font-size:11px;padding:3px 8px;border:1px solid #444;border-radius:6px;', name);
+      const a = el('a', 'color:var(--vm-accent);text-decoration:none;font-size:11px;padding:3px 8px;border:1px solid var(--vm-btn-border);border-radius:6px;', name);
       a.href = `https://i.ytimg.com/vi/${videoId}/${file}.jpg`;
       a.target = '_blank';
       a.title = `Open ${name} thumbnail`;
@@ -392,7 +406,7 @@
       ['NoCookie', `https://www.youtube-nocookie.com/embed/${videoId}`],
     ];
     for (const [label, url] of links) {
-      const a = el('a', 'color:#3ea6ff;text-decoration:none;font-size:11px;padding:3px 8px;border:1px solid #444;border-radius:6px;', label);
+      const a = el('a', 'color:var(--vm-accent);text-decoration:none;font-size:11px;padding:3px 8px;border:1px solid var(--vm-btn-border);border-radius:6px;', label);
       a.href = url;
       a.target = '_blank';
       wrap.appendChild(a);
@@ -407,7 +421,7 @@
       const pre = el('div', `
         white-space:pre-wrap;max-height:340px;overflow:auto;
         font-size:12px;line-height:1.5;opacity:.9;
-        background:#222;padding:10px;border-radius:6px;
+        background:var(--vm-pre-bg);padding:10px;border-radius:6px;
         word-break:break-word;
       `);
       const re = /(https?:\/\/\S+)|(\d{1,2}:\d{2}(?::\d{2})?)/g;
@@ -415,12 +429,12 @@
       while ((m = re.exec(text)) !== null) {
         if (m.index > last) pre.appendChild(document.createTextNode(text.slice(last, m.index)));
         if (m[1]) {
-          const a = el('a', 'color:#3ea6ff;', m[1]);
+          const a = el('a', 'color:var(--vm-accent);', m[1]);
           a.href = m[1]; a.target = '_blank';
           pre.appendChild(a);
         } else {
           const sec = parseTimestamp(m[2]);
-          const s = el('span', 'color:#3ea6ff;cursor:pointer;text-decoration:underline;', m[2]);
+          const s = el('span', 'color:var(--vm-accent);cursor:pointer;text-decoration:underline;', m[2]);
           s.addEventListener('click', () => seekTo(sec));
           pre.appendChild(s);
         }
@@ -448,11 +462,11 @@
           display:flex;gap:10px;align-items:center;
           padding:3px 6px;border-radius:4px;cursor:pointer;font-size:12px;
         `);
-        row.addEventListener('mouseenter', () => row.style.background = '#2a2a2a');
+        row.addEventListener('mouseenter', () => row.style.background = 'var(--vm-row-hover)');
         row.addEventListener('mouseleave', () => row.style.background = '');
         row.addEventListener('click', () => seekTo(a));
         row.appendChild(el('span', `display:inline-block;width:8px;height:8px;border-radius:50%;background:${COLORS[s.category] || '#888'};flex:none;`));
-        row.appendChild(el('span', 'min-width:110px;color:#3ea6ff;font-variant-numeric:tabular-nums;',
+        row.appendChild(el('span', 'min-width:110px;color:var(--vm-accent);font-variant-numeric:tabular-nums;',
           `${fmtDur(Math.floor(a))} – ${fmtDur(Math.floor(b))}`));
         row.appendChild(el('span', '', s.category));
         list.appendChild(row);
@@ -467,10 +481,10 @@
     const wrap = el('div', `
       margin: 16px 0 24px !important;
       padding: 16px 20px !important;
-      background: #1a1a1a !important;
-      border: 3px solid #ff4444 !important;
+      background: var(--vm-bg) !important;
+      border: 3px solid var(--vm-border) !important;
       border-radius: 12px !important;
-      color: #f1f1f1 !important;
+      color: var(--vm-text) !important;
       font-family: "Roboto","Arial",sans-serif !important;
       font-size: 14px !important;
       line-height: 1.5 !important;
@@ -481,10 +495,31 @@
     wrap.id = PANEL_ID;
     wrap.setAttribute('data-video-id', data.videoId);
 
+    const applyTheme = (themeId) => {
+      const t = THEMES[themeId] || THEMES.default;
+      for (const [k, v] of Object.entries(t.vars)) wrap.style.setProperty(k, v);
+      try { localStorage.setItem(LS_THEME, themeId); } catch (e) { }
+    };
+    const currentTheme = localStorage.getItem(LS_THEME) || 'default';
+    applyTheme(currentTheme);
+
+    const themeSelect = el('select', 'background:var(--vm-btn-bg);color:var(--vm-text);border:1px solid var(--vm-btn-border);border-radius:4px;font-size:11px;padding:2px;cursor:pointer;margin-right:8px;outline:none;');
+    for (const [id, t] of Object.entries(THEMES)) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = t.name;
+      if (id === currentTheme) opt.selected = true;
+      themeSelect.appendChild(opt);
+    }
+    themeSelect.addEventListener('change', e => applyTheme(e.target.value));
+
     // header w/ collapse toggle
     const header = el('div', 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;');
-    header.appendChild(el('div', 'font-size:12px;opacity:.5;',
+    const titleArea = el('div', 'display:flex;align-items:center;');
+    titleArea.appendChild(el('div', 'font-size:12px;opacity:.5;margin-right:12px;',
       IS_MOBILE ? '★ YT INFO PANEL' : '★ YT INFO PANEL (Alt+I to toggle)'));
+    titleArea.appendChild(themeSelect);
+    header.appendChild(titleArea);
     const collapseBtn = btn('—', null, 'Collapse');
     collapseBtn.setAttribute('data-role', 'collapse');
     header.appendChild(collapseBtn);
@@ -533,7 +568,7 @@
       } else if (k === 'Channel') {
         valEl = el('div');
         if (data.channelUrl) {
-          const link = el('a', 'color:#3ea6ff;text-decoration:none;font-weight:500;', data.channel || '—');
+          const link = el('a', 'color:var(--vm-accent);text-decoration:none;font-weight:500;', data.channel || '—');
           link.href = data.channelUrl;
           link.target = '_blank';
           valEl.appendChild(link);
@@ -618,7 +653,7 @@
     applyCollapsed(collapsed);
     collapseBtn.addEventListener('click', () => {
       collapsed = !collapsed;
-      try { localStorage.setItem(LS_COLLAPSED, collapsed ? '1' : '0'); } catch (e) {}
+      try { localStorage.setItem(LS_COLLAPSED, collapsed ? '1' : '0'); } catch (e) { }
       applyCollapsed(collapsed);
     });
 
