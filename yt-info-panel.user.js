@@ -5,7 +5,7 @@
 // @match        https://m.youtube.com/*
 // @run-at       document-idle
 // @grant        none
-// @version      2.4
+// @version      2.5
 // @description  Clean info panel: channel, views, likes/dislikes, ratio bar, engagement, chapters, speed boost (>2x), SponsorBlock, thumbnails, alt frontends, expandable description.
 // @author       jloures
 // @downloadURL  https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
@@ -29,7 +29,17 @@
     dracula: { name: 'Dracula', vars: { '--vm-bg': '#282a36', '--vm-text': '#f8f8f2', '--vm-border': '#bd93f9', '--vm-btn-bg': '#44475a', '--vm-btn-bg-hover': '#6272a4', '--vm-btn-border': '#6272a4', '--vm-accent': '#ff79c6', '--vm-pre-bg': '#21222c', '--vm-ratio-bg': '#44475a', '--vm-row-hover': '#44475a' } },
     nord: { name: 'Nord', vars: { '--vm-bg': '#2e3440', '--vm-text': '#d8dee9', '--vm-border': '#88c0d0', '--vm-btn-bg': '#3b4252', '--vm-btn-bg-hover': '#434c5e', '--vm-btn-border': '#4c566a', '--vm-accent': '#8fbcbb', '--vm-pre-bg': '#242933', '--vm-ratio-bg': '#3b4252', '--vm-row-hover': '#3b4252' } },
     gruvbox: { name: 'Gruvbox', vars: { '--vm-bg': '#282828', '--vm-text': '#ebdbb2', '--vm-border': '#cc241d', '--vm-btn-bg': '#3c3836', '--vm-btn-bg-hover': '#504945', '--vm-btn-border': '#504945', '--vm-accent': '#b8bb26', '--vm-pre-bg': '#1d2021', '--vm-ratio-bg': '#3c3836', '--vm-row-hover': '#3c3836' } },
-    synthwave: { name: 'Synthwave', vars: { '--vm-bg': '#2b213a', '--vm-text': '#f92aad', '--vm-border': '#ff8b39', '--vm-btn-bg': '#241b31', '--vm-btn-bg-hover': '#3a2d4d', '--vm-btn-border': '#36274e', '--vm-accent': '#00fff5', '--vm-pre-bg': '#1f162a', '--vm-ratio-bg': '#36274e', '--vm-row-hover': '#3a2d4d' } }
+    synthwave: { name: 'Synthwave', vars: { '--vm-bg': '#2b213a', '--vm-text': '#f92aad', '--vm-border': '#ff8b39', '--vm-btn-bg': '#241b31', '--vm-btn-bg-hover': '#3a2d4d', '--vm-btn-border': '#36274e', '--vm-accent': '#00fff5', '--vm-pre-bg': '#1f162a', '--vm-ratio-bg': '#36274e', '--vm-row-hover': '#3a2d4d' } },
+    oneDark: { name: 'One Dark', vars: { '--vm-bg': '#282c34', '--vm-text': '#abb2bf', '--vm-border': '#61afef', '--vm-btn-bg': '#3e4452', '--vm-btn-bg-hover': '#4b5263', '--vm-btn-border': '#5c6370', '--vm-accent': '#98c379', '--vm-pre-bg': '#21252b', '--vm-ratio-bg': '#3e4452', '--vm-row-hover': '#353b45' } },
+    cyberpunk: { name: 'Cyberpunk', vars: { '--vm-bg': '#000b19', '--vm-text': '#00f0ff', '--vm-border': '#fcee0a', '--vm-btn-bg': '#051d3b', '--vm-btn-bg-hover': '#0b3a75', '--vm-btn-border': '#00f0ff', '--vm-accent': '#ff007f', '--vm-pre-bg': '#00050d', '--vm-ratio-bg': '#051d3b', '--vm-row-hover': '#082c59' } },
+    tokyoNight: { name: 'Tokyo Night', vars: { '--vm-bg': '#1a1b26', '--vm-text': '#a9b1d6', '--vm-border': '#bb9af7', '--vm-btn-bg': '#24283b', '--vm-btn-bg-hover': '#414868', '--vm-btn-border': '#414868', '--vm-accent': '#7aa2f7', '--vm-pre-bg': '#16161e', '--vm-ratio-bg': '#24283b', '--vm-row-hover': '#2f354f' } },
+    evergreen: { name: 'Evergreen', vars: { '--vm-bg': '#1b2a22', '--vm-text': '#d8ebd9', '--vm-border': '#4f7942', '--vm-btn-bg': '#273d32', '--vm-btn-bg-hover': '#355344', '--vm-btn-border': '#3d5e4e', '--vm-accent': '#a3c1ad', '--vm-pre-bg': '#131e18', '--vm-ratio-bg': '#273d32', '--vm-row-hover': '#2d473a' } },
+    rosePine: { name: 'Rose Pine', vars: { '--vm-bg': '#191724', '--vm-text': '#e0def4', '--vm-border': '#ebbcba', '--vm-btn-bg': '#26233a', '--vm-btn-bg-hover': '#31748f', '--vm-btn-border': '#403d52', '--vm-accent': '#f6c177', '--vm-pre-bg': '#212030', '--vm-ratio-bg': '#26233a', '--vm-row-hover': '#2a2837' } },
+    oceanic: { name: 'Oceanic', vars: { '--vm-bg': '#0f172a', '--vm-text': '#cbd5e1', '--vm-border': '#06b6d4', '--vm-btn-bg': '#1e293b', '--vm-btn-bg-hover': '#334155', '--vm-btn-border': '#475569', '--vm-accent': '#38bdf8', '--vm-pre-bg': '#020617', '--vm-ratio-bg': '#1e293b', '--vm-row-hover': '#1e293b' } },
+    coffee: { name: 'Coffee', vars: { '--vm-bg': '#2d2420', '--vm-text': '#eedfd2', '--vm-border': '#c08a6e', '--vm-btn-bg': '#3e302b', '--vm-btn-bg-hover': '#4e3d36', '--vm-btn-border': '#604b43', '--vm-accent': '#e0a98c', '--vm-pre-bg': '#211a17', '--vm-ratio-bg': '#3e302b', '--vm-row-hover': '#362a25' } },
+    sakura: { name: 'Sakura Blush', vars: { '--vm-bg': '#fff0f5', '--vm-text': '#4a3b42', '--vm-border': '#ffb7c5', '--vm-btn-bg': '#ffe4e1', '--vm-btn-bg-hover': '#ffd1dc', '--vm-btn-border': '#ffc0cb', '--vm-accent': '#db7093', '--vm-pre-bg': '#fffaf0', '--vm-ratio-bg': '#ffe4e1', '--vm-row-hover': '#ffdcd2' } },
+    matrix: { name: 'Matrix', vars: { '--vm-bg': '#050505', '--vm-text': '#00ff33', '--vm-border': '#00aa22', '--vm-btn-bg': '#111111', '--vm-btn-bg-hover': '#222222', '--vm-btn-border': '#00ff33', '--vm-accent': '#00ff33', '--vm-pre-bg': '#010101', '--vm-ratio-bg': '#111111', '--vm-row-hover': '#151515' } },
+    aura: { name: 'Aura', vars: { '--vm-bg': '#151026', '--vm-text': '#ede8f5', '--vm-border': '#a277ff', '--vm-btn-bg': '#241c3d', '--vm-btn-bg-hover': '#332757', '--vm-btn-border': '#3d2f66', '--vm-accent': '#61ffca', '--vm-pre-bg': '#0c0917', '--vm-ratio-bg': '#241c3d', '--vm-row-hover': '#2b2149' } }
   };
 
   let latestPlayerResponse = null;
