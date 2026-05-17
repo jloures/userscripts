@@ -5,7 +5,7 @@
 // @match        https://m.youtube.com/*
 // @run-at       document-idle
 // @grant        none
-// @version      2.2
+// @version      2.3
 // @description  Clean info panel: channel, views, likes/dislikes, ratio bar, engagement, chapters, speed boost (>2x), SponsorBlock, thumbnails, alt frontends, expandable description.
 // @author       jloures
 // @downloadURL  https://raw.githubusercontent.com/jloures/userscripts/main/yt-info-panel.user.js
@@ -592,18 +592,64 @@
     }
     body.appendChild(grid);
 
+    // mini info container for collapsed mode
+    const miniInfoContainer = el('div', 'display:none;font-size:11px;opacity:.85;padding-top:8px;border-top:1px dashed var(--vm-btn-border);');
+    const miniInfoContent = el('div', 'display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;');
+    const addDivider = () => miniInfoContent.appendChild(el('span', 'opacity:.4;', '·'));
+
+    if (data.channel) {
+      const miniChannel = el('span', 'font-weight:500;color:var(--vm-accent);');
+      if (data.channelUrl) {
+        const link = el('a', 'color:var(--vm-accent);text-decoration:none;font-weight:500;', data.channel);
+        link.href = data.channelUrl;
+        link.target = '_blank';
+        miniChannel.appendChild(link);
+      } else {
+        miniChannel.textContent = data.channel;
+      }
+      miniInfoContent.appendChild(miniChannel);
+      addDivider();
+    }
+
+    const miniViews = el('span', '', fmtNum(data.views) + ' views');
+    miniInfoContent.appendChild(miniViews);
+    addDivider();
+
+    const miniRatio = el('span', '', 'fetching...');
+    miniInfoContent.appendChild(miniRatio);
+    addDivider();
+
+    const miniDuration = el('span', '', fmtDur(data.duration) + (data.isLive ? ' (live)' : ''));
+    miniInfoContent.appendChild(miniDuration);
+    miniInfoContainer.appendChild(miniInfoContent);
+
+    const updateMiniRatio = (likes, dislikes) => {
+      const activeLikes = likes ?? likeCount;
+      if (activeLikes == null) return;
+      if (dislikes == null) {
+        miniRatio.textContent = `${fmtNum(activeLikes)} likes`;
+        return;
+      }
+      const total = activeLikes + dislikes;
+      if (!total) { miniRatio.textContent = '—'; return; }
+      const pct = (activeLikes / total) * 100;
+      miniRatio.textContent = `${pct.toFixed(1)}% positive (${fmtNum(activeLikes)} / ${fmtNum(dislikes)})`;
+    };
+
     // async wiring
     let likeCount = null;
     pollLikes(likesEl, c => {
       likeCount = c;
       engagement.update(c);
+      updateMiniRatio(c);
     });
     fetchDislikes(data.videoId).then(d => {
-      if (!d) { dislikesEl.textContent = '—'; return; }
+      if (!d) { dislikesEl.textContent = '—'; updateMiniRatio(likeCount); return; }
       if (d.dislikes != null) dislikesEl.textContent = fmtNum(d.dislikes);
       const likesForRatio = likeCount ?? d.likes;
       ratioBar.update(likesForRatio, d.dislikes);
       if (!likeCount && d.likes) engagement.update(d.likes);
+      updateMiniRatio(likesForRatio, d.dislikes);
     });
 
     // speed controls
@@ -644,10 +690,12 @@
     }
 
     wrap.appendChild(body);
+    wrap.appendChild(miniInfoContainer);
 
     // collapse persistence
     const applyCollapsed = c => {
       body.style.display = c ? 'none' : 'block';
+      miniInfoContainer.style.display = c ? 'block' : 'none';
       collapseBtn.textContent = c ? '+' : '—';
       collapseBtn.title = c ? 'Expand' : 'Collapse';
     };
